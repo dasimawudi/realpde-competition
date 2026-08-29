@@ -7,6 +7,7 @@
 *.hdf5
 *.ckpt
 *.onnx
+*.bundle
 
 # Competition data and downloaded bundles
 data/
