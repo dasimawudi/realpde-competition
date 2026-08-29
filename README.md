@@ -49,10 +49,10 @@ submission_cno_tke4100_bounds_abs0075_rel000_flat_20260829.zip
 另有一个更激进的 CNO-only 候选：
 
 ```text
-submission_cno_tke4100_cont600_balanced_abs0075_rel000_flat_20260829.zip
+submission_cno_tke4100_continterp_lam125_abs0075_rel010_flat_20260829.zip
 ```
 
-它从 `tke4100` 继续极低学习率训练到 local best 600 iter。本地表现为 TKE/MVPE 改善、Rel-L2 小幅退化。它值得作为第二优先级尝试，但不如未继续训练的 `tke4100_rel000` 稳。
+它从 `tke4100` 到 `cont600` 做单模型权重空间轻微外推，local proxy 最高。本地表现为 TKE/MVPE 改善、Rel-L2 小幅退化。它值得作为“冲分”候选，但不如未继续训练的 `tke4100_rel000` 稳。
 
 ## 注意
 

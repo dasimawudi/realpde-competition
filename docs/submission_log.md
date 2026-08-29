@@ -38,6 +38,26 @@ mvpe: 0.10154706
 local_mean5_proxy: 79.09720
 ```
 
+Single-model interpolation/extrapolation between original `tke4100` and `cont600`:
+
+| File | Role |
+|---|---|
+| `submission_cno_tke4100_continterp_lam125_abs0075_rel000_flat_20260829.zip` | Aggressive CNO-only candidate, using lambda=1.25 and rel=0.0 bounds. |
+| `submission_cno_tke4100_continterp_lam125_abs0075_rel010_flat_20260829.zip` | Local best among the CNO-only candidates; recommended if explicitly trying to beat current score. |
+| `submission_cno_tke4100_continterp_lam125_abs0075_rel020_flat_20260829.zip` | Same checkpoint with relative bound variant. |
+
+Local interpolation best summary:
+
+```text
+run: cno_tke4100_to_cont600_weight_interp_scan_20260829
+lambda_cont600: 1.25
+rel_l2: 0.10238736
+tke: 0.70794994
+mvpe: 0.10147392
+local_mean5_proxy: 79.16723
+best_local_bound: abs=0.0075, rel=0.01
+```
+
 ## Lessons learned
 
 - Do not optimize the self-written equal-weight final estimate. Codabench states the `final_score` combination is not published.
