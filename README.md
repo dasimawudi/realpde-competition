@@ -1,0 +1,59 @@
+# RealPDE Competition 工作仓库
+
+这是 RealPDE Competition Track 1 的实验整理仓库，包含我们用于复现实验、微调、打包和本地校验提交包的脚本与记录。
+
+## 当前结论
+
+截至 2026-08-29，Codabench 真实提交结果显示：
+
+- `submission_cno_tke1200_bounds_rel00.zip`: `75.58455`
+- 2026-08-29 的 UNet 后处理提交: `74.48384`
+
+因此当前主线已经从 UNet 切回 CNO。UNet 在本地验证代理分数较高，但隐藏榜单上 Rel-L2、TKE、MVPE 都弱于 CNO，说明之前的 local final proxy 和验证集后处理有明显泛化风险。
+
+## 仓库内容
+
+- `tools/realpde_tke_finetune.py`：CNO 物理损失微调脚本。
+- `tools/realpde_arch_finetune.py`：通用架构微调脚本，支持 UNet 等模型。
+- `tools/realpde_calibrate_bounds.py`：本地评估与区间 bounds 扫描脚本。
+- `tools/realpde_compare_architectures.py`：不同 baseline 架构对比脚本。
+- `tools/realpde_ensemble_scan.py`：候选模型 ensemble 扫描脚本。
+- `docs/submission_log.md`：提交与候选包记录。
+
+## 不进 Git 的内容
+
+数据集、checkpoint、提交 zip、官方 `RealPDEBench/` checkout 都被 `.gitignore` 排除。原因是这些文件体积较大，且有些是比赛发布/远程训练产物，不适合直接推到 GitHub。
+
+本地提交包仍保存在工作目录中；README 只记录文件名和用途。
+
+## 环境
+
+远程训练机当前使用官方兼容镜像：
+
+```text
+pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime
+```
+
+官方比赛页声明该镜像为评测 Docker image。CNO 包只依赖 `torch`、`numpy` 和随包 vendored 的 `rpde_baselines/cno.py`。
+
+## 推荐下一次提交
+
+如果下一次只能提交一个包，当前建议优先试：
+
+```text
+submission_cno_tke4100_bounds_abs0075_rel000_flat_20260829.zip
+```
+
+它是 CNO `tke4100` checkpoint 的 flat-clean 单模型版本，最接近已在榜上表现最好的 CNO 简洁路线。`rel010` 是本地 SPS proxy 略优版本，但考虑到隐藏榜单上已成功包名为 `rel00`，优先级略低。
+
+另有一个更激进的 CNO-only 候选：
+
+```text
+submission_cno_tke4100_cont600_balanced_abs0075_rel000_flat_20260829.zip
+```
+
+它从 `tke4100` 继续极低学习率训练到 local best 600 iter。本地表现为 TKE/MVPE 改善、Rel-L2 小幅退化。它值得作为第二优先级尝试，但不如未继续训练的 `tke4100_rel000` 稳。
+
+## 注意
+
+Codabench 页面说明 `final_score` 的组合方式不公开，starting kit 只保证五个子分的计算一致。因此本仓库中的本地 `mean5_proxy` 只能作为调参参考，不能作为真实 leaderboard 分数承诺。

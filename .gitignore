@@ -1,0 +1,46 @@
+# Large/local artifacts
+*.zip
+*.pth
+*.pt
+*.npz
+*.h5
+*.hdf5
+*.ckpt
+*.onnx
+
+# Competition data and downloaded bundles
+data/
+downloads/
+RealPDEBench/
+baseline_submission_cno/
+submission_*_2026*/
+_flat_build_*/
+
+# Python/runtime caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs and temporary run outputs
+*.log
+*.pid
+runs/
+results/
+wandb/
+tensorboard/
+
+# Local environment
+.env
+.venv/
+venv/
+env/
+.conda/
+.conda-envs/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
