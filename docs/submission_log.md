@@ -8,6 +8,7 @@
 | 900896 | `submission_cno_realft_4700_20260825.zip` | 2026-08-25 15:27 | 70.04628 | 93.258780 | 68.856072 | 92.016287 | 88.618744 | 10.578370 | Real-finetuned CNO. |
 | 903976 | `submission_cno_tke1200_bounds_rel00.zip` | 2026-08-27 15:44 | 75.58455 | 93.542062 | 70.934325 | 92.167656 | 87.236663 | 27.780536 | Current best known Codabench result. |
 | 907047 | `8-29提交.zip` | 2026-08-29 13:47 | 74.48384 | 91.868766 | 66.666667 | 89.885887 | 91.959120 | 27.374631 | UNet local-proxy candidate; hidden physical scores worse than CNO. |
+| TBD | `submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip` | 2026-08-30 | 75.94193 | TBD | TBD | TBD | TBD | TBD | User-reported hidden score; current score-to-beat baseline for feature-engineering runs. |
 
 ## Local packages prepared on 2026-08-29
 

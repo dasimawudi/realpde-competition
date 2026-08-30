@@ -18,7 +18,11 @@
 - `tools/realpde_calibrate_bounds.py`：本地评估与区间 bounds 扫描脚本。
 - `tools/realpde_compare_architectures.py`：不同 baseline 架构对比脚本。
 - `tools/realpde_ensemble_scan.py`：候选模型 ensemble 扫描脚本。
+- `tools/realpde_feature_engineering.py`：从 `u/v/p` 构造速度、涡度、散度、时间差分、坐标等派生特征。
+- `tools/realpde_feature_adapter_train.py`：在 CNO 前训练一个 residual feature adapter，默认冻结 CNO 主体。
+- `tools/realpde_pack_feature_adapter.py`：把 feature-adapter checkpoint 打成 Codabench 可上传 zip。
 - `docs/submission_log.md`：提交与候选包记录。
+- `docs/feature_engineering_plan.md`：下一轮特征工程实验方案与远端命令。
 
 ## 不进 Git 的内容
 
@@ -45,6 +49,8 @@ submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
 ```
 
 它是 CNO `tke4100` → `cont600` 权重外推 `lambda=2.15` 后，再混入 20% Rel-L2/MVPE 微调方向的单模型包。相比纯外推版，它在本地验证上更均衡：Rel-L2、MVPE、SPS 改善，TKE 只小幅回退。`nobench` 版本刻意不启用 `cudnn.benchmark`，避免 Codabench 冷启动计时被卷积算法搜索拉高。
+
+用户已在 2026-08-30 手动提交该包，并反馈真实榜分为 `75.94193`。下一轮冲分建议以它对应的 checkpoint 为起点，先试 `docs/feature_engineering_plan.md` 中的 frozen feature adapter。
 
 保守备选：
 
