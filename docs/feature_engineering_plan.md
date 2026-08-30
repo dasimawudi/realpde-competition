@@ -26,6 +26,22 @@ adapter 最后一层初始化为 0，所以训练第 0 步等价于原模型；�
 
 ## 推荐第一轮远端实验
 
+先同步本仓库的特征工程分支到训练机：
+
+```bash
+source /etc/network_turbo
+if [ ! -d /root/autodl-fs/realpde_repo/.git ]; then
+  git clone https://github.com/dasimawudi/realpde-competition.git /root/autodl-fs/realpde_repo
+fi
+cd /root/autodl-fs/realpde_repo
+git fetch origin
+git checkout codex/feature-engineering
+git pull
+cp tools/realpde_feature_engineering.py /root/autodl-fs/realpde_runs/
+cp tools/realpde_feature_adapter_train.py /root/autodl-fs/realpde_runs/
+cp tools/realpde_pack_feature_adapter.py /root/autodl-fs/realpde_runs/
+```
+
 在 AutoDL/GPU 服务器上，从当前最强 CNO checkpoint 开始：
 
 ```bash
