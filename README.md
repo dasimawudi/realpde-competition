@@ -4,7 +4,7 @@
 
 ## 当前结论
 
-截至 2026-08-29，Codabench 真实提交结果显示：
+截至 2026-08-30，Codabench 真实提交结果显示：
 
 - `submission_cno_tke1200_bounds_rel00.zip`: `75.58455`
 - 2026-08-29 的 UNet 后处理提交: `74.48384`
@@ -41,19 +41,19 @@ pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime
 如果下一次只能提交一个包，当前建议优先试：
 
 ```text
+submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
+```
+
+它是 CNO `tke4100` → `cont600` 权重外推 `lambda=2.15` 后，再混入 20% Rel-L2/MVPE 微调方向的单模型包。相比纯外推版，它在本地验证上更均衡：Rel-L2、MVPE、SPS 改善，TKE 只小幅回退。`nobench` 版本刻意不启用 `cudnn.benchmark`，避免 Codabench 冷启动计时被卷积算法搜索拉高。
+
+保守备选：
+
+```text
 submission_cno_tke4100_bounds_abs0075_rel000_flat_20260829.zip
 ```
 
-它是 CNO `tke4100` checkpoint 的 flat-clean 单模型版本，最接近已在榜上表现最好的 CNO 简洁路线。`rel010` 是本地 SPS proxy 略优版本，但考虑到隐藏榜单上已成功包名为 `rel00`，优先级略低。
-
-另有一个更激进的 CNO-only 候选：
-
-```text
-submission_cno_tke4100_continterp_lam125_abs0075_rel010_flat_20260829.zip
-```
-
-它从 `tke4100` 到 `cont600` 做单模型权重空间轻微外推，local proxy 最高。本地表现为 TKE/MVPE 改善、Rel-L2 小幅退化。它值得作为“冲分”候选，但不如未继续训练的 `tke4100_rel000` 稳。
+它是 CNO `tke4100` checkpoint 的 flat-clean 单模型版本，最接近已在榜上表现最好的 CNO 简洁路线。
 
 ## 注意
 
-Codabench 页面说明 `final_score` 的组合方式不公开，starting kit 只保证五个子分的计算一致。因此本仓库中的本地 `mean5_proxy` 只能作为调参参考，不能作为真实 leaderboard 分数承诺。
+Codabench 页面说明当前阶段使用 Starting Kit v9，`sps_score` 已改为线性映射；`final_score` 的组合方式不公开，starting kit 只保证五个子分的计算一致。因此本仓库中的本地 proxy 只能作为调参参考，不能作为真实 leaderboard 分数承诺。

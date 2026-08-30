@@ -64,3 +64,61 @@ best_local_bound: abs=0.0075, rel=0.01
 - UNet postprocessing can look strong on released validation data but generalize poorly on hidden data.
 - CNO currently has better hidden physical scores, especially Rel-L2, TKE, and MVPE.
 - Prefer simple CNO packages until a new candidate improves hidden physical subscores.
+
+## Local packages prepared on 2026-08-30
+
+The 2026-08-30 work focused on CNO-only weight-space moves, because the 2026-08-29 UNet submission underperformed on hidden physical metrics.
+
+Important scoring note: the current Codabench announcement says Track 1 is on Starting Kit v9, where `sps_score` is mapped linearly and `final_score` combination is not published. A temporarily downloaded older v6 `scoring.py` was useful for validity checks but not for choosing the final score.
+
+### Weight extrapolation from `tke4100` to `cont600`
+
+Scanned `lambda_cont600` values around the previous best direction. The best region was broad and shallow around `2.1` to `2.35`; higher extrapolation started to hurt Rel-L2/SPS.
+
+Representative local validation rows:
+
+| Variant | rel_l2 | TKE | MVPE | Bound | Note |
+|---|---:|---:|---:|---|---|
+| `lambda=2.15` | 0.103102 | 0.695704 | 0.101154 | `abs=0.0075, rel=0.0075` | Safer than 2.35; better Rel/SPS. |
+| `lambda=2.35` | 0.103898 | 0.694675 | 0.101337 | `abs=0.0075, rel=0.0075` | Slightly better TKE; more extrapolated. |
+
+Generated packages:
+
+| File | Role |
+|---|---|
+| `submission_cno_tke4100_cont600_extrapolate_lam215_abs0075_rel0075_20260830.zip` | Pure extrapolation, safer side of the peak. |
+| `submission_cno_tke4100_cont600_extrapolate_lam235_abs0075_rel0075_20260830.zip` | Pure extrapolation, TKE-heavy side of the peak. |
+
+### Rel/MVPE micro-tune and interpolation
+
+A low-LR micro-tune from `lam215` improved Rel-L2/MVPE/SPS but gradually gave back TKE. The best saved checkpoint was at 200 updates.
+
+Interpolating between pure `lam215` and the 200-step micro-tuned checkpoint found the best local tradeoff at `alpha_micro=0.20`.
+
+Final recommended package:
+
+| File | Role |
+|---|---|
+| `submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip` | Current main candidate. Single CNO model; `lambda_cont600=2.15`, then 20% mix toward Rel/MVPE micro-tune. Uses `abs=0.0075, rel=0.0075` bounds and disables `cudnn.benchmark` to avoid cold-start timing spikes. |
+
+Local validation summary for the final candidate:
+
+```text
+base: cno_tke4100_cont600_extrapolate_lam215_20260830.pth
+micro target: cno_lam215_rel_mvpe_micro_lr1e7_20260830/model_best.pth
+alpha_micro: 0.20
+rel_l2: 0.10305153
+tke: 0.69582664
+mvpe: 0.10112838
+best_bound: abs=0.0075, rel=0.0075
+zip: submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
+```
+
+Packaging check:
+
+```text
+model.pth
+rpde_baselines/__init__.py
+rpde_baselines/cno.py
+submission.py
+```
