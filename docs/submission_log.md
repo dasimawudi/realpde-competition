@@ -123,3 +123,41 @@ rpde_baselines/__init__.py
 rpde_baselines/cno.py
 submission.py
 ```
+
+## Local packages prepared on 2026-08-31
+
+Work moved to the `192.168.0.148` GPU server with data under `/home/chyfuture/RealPDE_data/p0ab_real_h5_20260830/`. The server has an RTX 3090 24GB and a reusable Docker image with PyTorch `2.2.2+cu121`; `h5py` and `matplotlib` were installed into a temporary local training image.
+
+Important HDF5 split note:
+
+```text
+usable h5 files: 81 after excluding 7575_0.h5
+train trajectories: 65
+validation trajectories: 16
+train windows: 2701
+validation windows: 640
+```
+
+Negative experiments:
+
+- Frozen residual feature adapter degraded quickly even at low learning rate. It is not ready to submit.
+- Low-learning-rate continuation from the current best CNO also degraded on the HDF5 validation split by 100 updates.
+- Interpolating the current best CNO toward the existing P0 baseline checkpoint degraded sharply even at `alpha=0.005`; negative extrapolation produced NaNs.
+
+Bounds-only candidate:
+
+| File | Role |
+|---|---|
+| `submission_cno_tke4100_lam215_microa020_abs0075_rel015_nobench_20260831.zip` | Same prediction model as the 75.94193 submission, but with `abs=0.0075, rel=0.015` bounds based on the 2026-08-31 HDF5 validation sweep. |
+
+HDF5 validation summary for current-best prediction with fine bounds:
+
+```text
+checkpoint: current_best/model.pth extracted from submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
+rel_l2: 0.11486314
+tke: 0.66078759
+mvpe: 0.10656577
+best_bound: abs=0.0075, rel=0.015
+local_mean5_proxy: 77.71761
+zip: submission_cno_tke4100_lam215_microa020_abs0075_rel015_nobench_20260831.zip
+```

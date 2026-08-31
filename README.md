@@ -55,6 +55,14 @@ submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
 
 用户已在 2026-08-30 手动提交该包，并反馈真实榜分为 `75.94193`。下一轮冲分建议以它对应的 checkpoint 为起点，先试 `docs/feature_engineering_plan.md` 中的 frozen feature adapter。
 
+2026-08-31 在 HDF5 直读 split 上发现 frozen feature adapter、低学习率续训、向 P0 baseline 权重插值都不稳；当前只产生一个低风险 bounds-only 候选：
+
+```text
+submission_cno_tke4100_lam215_microa020_abs0075_rel015_nobench_20260831.zip
+```
+
+它与 `75.94193` 包使用同一个预测模型，只把不确定性区间改成 `abs=0.0075, rel=0.015`。
+
 保守备选：
 
 ```text
