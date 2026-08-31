@@ -192,7 +192,7 @@ def main() -> None:
         }
         rows.append(row)
         print("ROW " + json.dumps(row, sort_keys=True), flush=True)
-        if best_row is None or row["final_est"] > best_row["final_est"]:
+        if np.isfinite(row["final_est"]) and (best_row is None or row["final_est"] > best_row["final_est"]):
             best_row = row
             best_state = {key: value.detach().cpu() if torch.is_tensor(value) else value for key, value in state.items()}
             save_cno_checkpoint(args.out_dir / "model_best.pth", best_state, best_row, config)
