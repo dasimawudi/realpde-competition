@@ -21,9 +21,12 @@
 - `tools/realpde_feature_engineering.py`：从 `u/v/p` 构造速度、涡度、散度、时间差分、坐标等派生特征。
 - `tools/realpde_feature_adapter_train.py`：在 CNO 前训练一个 residual feature adapter，默认冻结 CNO 主体。
 - `tools/realpde_h5_feature_adapter_train.py`：直接读取官方 HDF5 `u/v` 轨迹的 feature-adapter 训练脚本，适合 `/home/chyfuture/RealPDE_data/p0ab_real_h5_20260830/` 这种数据布局。
+- `tools/realpde_h5_residual_corrector_train.py`：冻结当前最佳 CNO，训练一个基于物理派生特征和 CNO 预测的轻量 residual correction 模型。
+- `tools/realpde_h5_residual_corrector_eval.py`：在 HDF5 validation split 上评估 residual-corrected CNO，并扫描 correction alpha 与 bounds。
 - `tools/realpde_h5_cno_weight_scan.py`：在 HDF5 验证 split 上扫描两个 CNO checkpoint 的权重插值/外推。
 - `tools/realpde_pack_cno_template.py`：复用已验证的 CNO 提交模板，替换 `model.pth` 并调整 bounds。
 - `tools/realpde_pack_feature_adapter.py`：把 feature-adapter checkpoint 打成 Codabench 可上传 zip。
+- `tools/realpde_pack_residual_corrector.py`：把 residual-corrected CNO checkpoint 打成 Codabench 可上传 zip。
 - `docs/submission_log.md`：提交与候选包记录。
 - `docs/feature_engineering_plan.md`：下一轮特征工程实验方案与远端命令。
 
@@ -55,13 +58,19 @@ submission_cno_tke4100_lam215_microa020_abs0075_rel0075_nobench_20260830.zip
 
 用户已在 2026-08-30 手动提交该包，并反馈真实榜分为 `75.94193`。下一轮冲分建议以它对应的 checkpoint 为起点，先试 `docs/feature_engineering_plan.md` 中的 frozen feature adapter。
 
-2026-08-31 在 HDF5 直读 split 上发现 frozen feature adapter、低学习率续训、向 P0 baseline 权重插值都不稳；当前只产生一个低风险 bounds-only 候选：
+2026-08-31 在 HDF5 直读 split 上发现 frozen feature adapter、低学习率续训、向 P0 baseline 权重插值都不稳；bounds-only 候选为：
 
 ```text
 submission_cno_tke4100_lam215_microa020_abs0075_rel015_nobench_20260831.zip
 ```
 
 它与 `75.94193` 包使用同一个预测模型，只把不确定性区间改成 `abs=0.0075, rel=0.015`。
+
+同日新增一条轻量 residual correction 路线：冻结当前最佳 CNO，只训练约 85k 参数的 3D conv 修正器。完整 HDF5 validation split 上，`alpha=1.0, abs=0.0075, rel=0.015` 的本地 proxy 为 `77.76902`，高于同一评估中的 `alpha=0` proxy `77.59278`，也略高于 bounds-only 记录 `77.71761`。对应候选：
+
+```text
+submission_cno_residualcorr_h24_b2_step200_alpha100_abs0075_rel015_20260831.zip
+```
 
 保守备选：
 

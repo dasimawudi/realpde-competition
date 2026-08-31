@@ -161,3 +161,23 @@ best_bound: abs=0.0075, rel=0.015
 local_mean5_proxy: 77.71761
 zip: submission_cno_tke4100_lam215_microa020_abs0075_rel015_nobench_20260831.zip
 ```
+
+Residual-correction candidate:
+
+| File | Role |
+|---|---|
+| `submission_cno_residualcorr_h24_b2_step200_alpha100_abs0075_rel015_20260831.zip` | Freezes the current best CNO and adds a tiny feature-driven 3D-conv residual corrector. Uses `alpha=1.0`, `abs=0.0075`, `rel=0.015`. |
+
+Full HDF5 validation summary for residual correction:
+
+```text
+checkpoint: residual_corr_fast_h24_b2_lr1e4_md004_20260831_1535/model_best.pth
+train: 200 updates, hidden=24, blocks=2, max_delta=0.04, residual_mse=0.15, delta_penalty=0.05
+best_alpha: 1.0
+best_bound: abs=0.0075, rel=0.015
+rel_l2: 0.11126853
+tke: 0.66070499
+mvpe: 0.10258214
+local_mean5_proxy: 77.76902
+zip: submission_cno_residualcorr_h24_b2_step200_alpha100_abs0075_rel015_20260831.zip
+```
