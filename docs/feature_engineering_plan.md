@@ -26,6 +26,8 @@ adapter 最后一层初始化为 0，所以训练第 0 步等价于原模型；�
 
 ## 推荐第一轮远端实验
 
+如果数据目录是直接 HDF5 轨迹，例如 `/home/chyfuture/RealPDE_data/p0ab_real_h5_20260830/`，优先使用 `realpde_h5_feature_adapter_train.py`，它不依赖 RealPDEBench 的 `Foil` loader。
+
 先同步本仓库的特征工程分支到训练机：
 
 ```bash
@@ -39,6 +41,7 @@ git checkout codex/feature-engineering
 git pull
 cp tools/realpde_feature_engineering.py /root/autodl-fs/realpde_runs/
 cp tools/realpde_feature_adapter_train.py /root/autodl-fs/realpde_runs/
+cp tools/realpde_h5_feature_adapter_train.py /root/autodl-fs/realpde_runs/
 cp tools/realpde_pack_feature_adapter.py /root/autodl-fs/realpde_runs/
 ```
 
@@ -60,6 +63,21 @@ python /root/autodl-fs/realpde_runs/realpde_feature_adapter_train.py \
   --temporal 0.04 \
   --grad 0.02 \
   --p-zero 0.01
+```
+
+HDF5 直读版示例：
+
+```bash
+python /repo/tools/realpde_h5_feature_adapter_train.py \
+  --real-root /data/p0ab_real_h5_20260830 \
+  --checkpoint /runs/current_best/model.pth \
+  --realpdebench-root /third_party \
+  --out-dir /runs/cno_h5_feature_adapter_frozen_YYYYMMDD_HHMM \
+  --updates 1200 \
+  --eval-interval 100 \
+  --batch-size 8 \
+  --test-batch-size 32 \
+  --adapter-lr 3e-4
 ```
 
 如果 adapter-only 比 iteration 0 有提升，再试更小学习率联训 backbone：
