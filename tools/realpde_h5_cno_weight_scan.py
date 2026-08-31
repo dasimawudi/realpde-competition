@@ -27,6 +27,8 @@ from realpde_h5_feature_adapter_train import (  # noqa: E402
 
 
 DEFAULT_ALPHAS = "-0.35,-0.25,-0.18,-0.12,-0.08,-0.05,-0.03,0,0.02,0.05,0.08,0.12,0.18,0.25"
+DEFAULT_ABS_WIDTHS = "0.005,0.0075,0.010,0.0125,0.015,0.0175,0.020,0.025,0.030,0.040"
+DEFAULT_REL_WIDTHS = "0,0.005,0.0075,0.010,0.0125,0.015,0.020,0.030,0.050,0.080,0.100,0.150,0.200"
 
 
 def parse_alphas(text: str) -> list[float]:
@@ -34,6 +36,13 @@ def parse_alphas(text: str) -> list[float]:
     if not values:
         raise ValueError("at least one alpha is required")
     return values
+
+
+def parse_widths(text: str) -> np.ndarray:
+    values = [float(part.strip()) for part in text.split(",") if part.strip()]
+    if not values:
+        raise ValueError("at least one width is required")
+    return np.array(values, dtype=np.float32)
 
 
 def normalized_state_dict(checkpoint_path: Path) -> dict[str, torch.Tensor]:
@@ -103,6 +112,8 @@ def main() -> None:
     parser.add_argument("--realpdebench-root", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--alphas", default=DEFAULT_ALPHAS)
+    parser.add_argument("--abs-widths", default=DEFAULT_ABS_WIDTHS)
+    parser.add_argument("--rel-widths", default=DEFAULT_REL_WIDTHS)
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=41)
     parser.add_argument("--in-steps", type=int, default=20)
@@ -146,8 +157,8 @@ def main() -> None:
         N_layers=3,
         activation="LeakyReLU",
     ).to(device)
-    abs_widths = np.array([0.005, 0.0075, 0.010, 0.0125, 0.015, 0.0175, 0.020, 0.025, 0.030, 0.040], dtype=np.float32)
-    rel_widths = np.array([0.0, 0.02, 0.05, 0.08, 0.10, 0.15, 0.20], dtype=np.float32)
+    abs_widths = parse_widths(args.abs_widths)
+    rel_widths = parse_widths(args.rel_widths)
 
     base_state = normalized_state_dict(args.base)
     target_state = normalized_state_dict(args.target)
@@ -158,6 +169,8 @@ def main() -> None:
         "realpdebench_root": str(args.realpdebench_root),
         "out_dir": str(args.out_dir),
         "alphas": alphas,
+        "abs_widths": abs_widths.tolist(),
+        "rel_widths": rel_widths.tolist(),
         "val_windows": len(val_set),
         "val_trajectories": len(val_paths),
         "max_eval_batches": args.max_eval_batches,
