@@ -77,7 +77,8 @@ python /repo/tools/realpde_h5_feature_adapter_train.py \
   --eval-interval 100 \
   --batch-size 8 \
   --test-batch-size 32 \
-  --adapter-lr 3e-4
+  --adapter-lr 3e-5 \
+  --adapter-delta 0.02
 ```
 
 如果 adapter-only 比 iteration 0 有提升，再试更小学习率联训 backbone：

@@ -529,6 +529,12 @@ def main() -> None:
     parser.add_argument("--adapter-lr", type=float, default=3e-4)
     parser.add_argument("--base-lr", type=float, default=1e-7)
     parser.add_argument("--weight-decay", type=float, default=1e-6)
+    parser.add_argument(
+        "--adapter-delta",
+        type=float,
+        default=0.02,
+        help="MSE penalty on adapter(input)-input to keep the frozen-CNO probe conservative.",
+    )
     parser.add_argument("--hidden", type=int, default=32)
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--train-base", action="store_true")
@@ -659,6 +665,7 @@ def main() -> None:
         "eval_interval": args.eval_interval,
         "max_eval_batches": args.max_eval_batches,
         "weights": weights,
+        "adapter_delta": args.adapter_delta,
         "trainable_parameters": trainable_count,
         "total_parameters": total_count,
     }
@@ -697,8 +704,14 @@ def main() -> None:
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
         optimizer.zero_grad(set_to_none=True)
-        pred = model(x)
+        adapted = model.adapter(x)
+        pred = model.base_model(adapted)
         loss, parts = physics_loss(pred, y, weights)
+        if args.adapter_delta > 0:
+            delta_penalty = torch.mean((adapted - x[..., :3]) ** 2)
+            loss = loss + args.adapter_delta * delta_penalty
+            parts["adapter_delta_mse"] = float(delta_penalty.detach().cpu())
+            parts["loss"] = float(loss.detach().cpu())
         loss.backward()
         if args.clip_grad and args.clip_grad > 0:
             torch.nn.utils.clip_grad_norm_(trainable_params, args.clip_grad)
