@@ -17,6 +17,7 @@ baseline_submission_cno/
 submission_*_2026*/
 _flat_build_*/
 _feature_adapter_build*/
+_cno_template_build*/
 
 # Python/runtime caches
 __pycache__/

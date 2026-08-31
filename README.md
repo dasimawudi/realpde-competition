@@ -21,6 +21,8 @@
 - `tools/realpde_feature_engineering.py`：从 `u/v/p` 构造速度、涡度、散度、时间差分、坐标等派生特征。
 - `tools/realpde_feature_adapter_train.py`：在 CNO 前训练一个 residual feature adapter，默认冻结 CNO 主体。
 - `tools/realpde_h5_feature_adapter_train.py`：直接读取官方 HDF5 `u/v` 轨迹的 feature-adapter 训练脚本，适合 `/home/chyfuture/RealPDE_data/p0ab_real_h5_20260830/` 这种数据布局。
+- `tools/realpde_h5_cno_weight_scan.py`：在 HDF5 验证 split 上扫描两个 CNO checkpoint 的权重插值/外推。
+- `tools/realpde_pack_cno_template.py`：复用已验证的 CNO 提交模板，替换 `model.pth` 并调整 bounds。
 - `tools/realpde_pack_feature_adapter.py`：把 feature-adapter checkpoint 打成 Codabench 可上传 zip。
 - `docs/submission_log.md`：提交与候选包记录。
 - `docs/feature_engineering_plan.md`：下一轮特征工程实验方案与远端命令。
