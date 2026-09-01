@@ -107,7 +107,12 @@ def submission_source(
             import torch
             from torch import nn
             from rpde_baselines.cno import CNO3d
-            from realpde_feature_engineering import augment_torch, feature_names
+            from realpde_feature_engineering import (
+                augment_torch,
+                feature_names,
+                future_context_feature_count,
+                future_context_torch,
+            )
 
             torch.backends.cudnn.benchmark = False
 
@@ -140,7 +145,7 @@ def submission_source(
                 return zero_pressure(last + steps * trend)
 
             def future_feature_count(include_pressure):
-                return 2 * len(feature_names(include_pressure=include_pressure)) + 9
+                return 2 * len(feature_names(include_pressure=include_pressure)) + 9 + future_context_feature_count()
 
             def build_future_features(x, base_pred, include_pressure):
                 base = zero_pressure(ensure_three_channels(base_pred))
@@ -151,7 +156,11 @@ def submission_source(
                 base_features = augment_torch(base, include_pressure=include_pressure)
                 past_features = augment_torch(ensure_three_channels(x), include_pressure=include_pressure)
                 last_features = past_features[:, -1:].expand(-1, out_steps, -1, -1, -1)
-                return torch.cat([base_features, last_features, linear, base - last_raw, base - linear], dim=-1)
+                context_features = future_context_torch(x, out_steps)
+                return torch.cat(
+                    [base_features, last_features, linear, base - last_raw, base - linear, context_features],
+                    dim=-1,
+                )
 
             def norm_groups(channels):
                 for groups in (8, 4, 2):

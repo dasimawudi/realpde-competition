@@ -30,7 +30,12 @@ from torch.utils.data import DataLoader
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from realpde_feature_engineering import augment_torch, feature_names  # noqa: E402
+from realpde_feature_engineering import (  # noqa: E402
+    augment_torch,
+    feature_names,
+    future_context_feature_count,
+    future_context_torch,
+)
 from realpde_h5_feature_adapter_train import (  # noqa: E402
     BAD_TRAIN_FILES,
     H5WindowDataset,
@@ -86,8 +91,10 @@ def future_linear_extrapolation(x: Tensor, out_steps: int) -> Tensor:
 
 def future_feature_count(include_pressure: bool) -> int:
     # CNO forecast features + last-observed features + three 3-channel relation
-    # blocks: linear extrapolation, CNO-last, CNO-linear.
-    return 2 * len(feature_names(include_pressure=include_pressure)) + 9
+    # blocks: linear extrapolation, CNO-last, CNO-linear.  The final context
+    # block repeats history statistics and boundary-distance hints along the
+    # future axis.
+    return 2 * len(feature_names(include_pressure=include_pressure)) + 9 + future_context_feature_count()
 
 
 def build_future_features(x: Tensor, base_pred: Tensor, *, include_pressure: bool) -> Tensor:
@@ -100,6 +107,7 @@ def build_future_features(x: Tensor, base_pred: Tensor, *, include_pressure: boo
     base_features = augment_torch(base, include_pressure=include_pressure)
     past_features = augment_torch(ensure_three_channels(x), include_pressure=include_pressure)
     last_features = past_features[:, -1:].expand(-1, out_steps, -1, -1, -1)
+    context_features = future_context_torch(x, out_steps)
 
     return torch.cat(
         [
@@ -108,6 +116,7 @@ def build_future_features(x: Tensor, base_pred: Tensor, *, include_pressure: boo
             linear,
             base - last_raw,
             base - linear,
+            context_features,
         ],
         dim=-1,
     )

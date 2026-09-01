@@ -30,6 +30,26 @@ DERIVED_UV_NAMES = (
     "y_coord",
     "t_coord",
 )
+FUTURE_CONTEXT_NAMES = (
+    "hist_u_mean",
+    "hist_v_mean",
+    "hist_p_mean",
+    "hist_u_std",
+    "hist_v_std",
+    "hist_p_std",
+    "last_u_minus_hist_mean",
+    "last_v_minus_hist_mean",
+    "last_p_minus_hist_mean",
+    "last_u_trend",
+    "last_v_trend",
+    "last_p_trend",
+    "hist_speed_mean",
+    "hist_speed_std",
+    "last_speed_minus_hist_mean",
+    "edge_x_distance",
+    "edge_y_distance",
+    "edge_min_distance",
+)
 
 
 def feature_names(include_pressure: bool = True) -> list[str]:
@@ -37,6 +57,18 @@ def feature_names(include_pressure: bool = True) -> list[str]:
 
     raw = list(RAW_CHANNEL_NAMES if include_pressure else RAW_CHANNEL_NAMES[:2])
     return raw + list(DERIVED_UV_NAMES)
+
+
+def future_context_feature_names() -> list[str]:
+    """Return channel names emitted by :func:`future_context_torch`."""
+
+    return list(FUTURE_CONTEXT_NAMES)
+
+
+def future_context_feature_count() -> int:
+    """Return the number of history/boundary context features."""
+
+    return len(FUTURE_CONTEXT_NAMES)
 
 
 def _validate_channels_last_shape(shape: Sequence[int]) -> None:
@@ -231,6 +263,84 @@ def augment_torch(x, *, include_pressure: bool = True, eps: float = 1e-6):
         ]
     )
     return torch.stack(channels, dim=-1)
+
+
+def future_context_torch(x, out_steps: int, *, eps: float = 1e-6):
+    """Build future-aligned history and boundary context features.
+
+    The residual corrector predicts the next 20 frames from a frozen CNO
+    forecast.  These context features summarize the observed 20-frame history
+    and repeat it along the future time axis, so the corrector can distinguish
+    steady regions, recently accelerating regions, and near-boundary cells
+    without seeing any target/future data.
+    """
+
+    import torch
+
+    if x.dtype != torch.float32:
+        x = x.float()
+    _validate_channels_last_shape(tuple(x.shape))
+    if out_steps <= 0:
+        raise ValueError(f"out_steps must be positive, got {out_steps}")
+
+    if x.shape[-1] >= 3:
+        raw = x[..., :3].clone()
+    else:
+        raw = torch.cat([x[..., :2], torch.zeros_like(x[..., :1])], dim=-1)
+    raw[..., 2] = 0.0
+
+    batch, _, height, width, _ = raw.shape
+    last = raw[:, -1:]
+    if raw.shape[1] > 1:
+        trend = raw[:, -1:] - raw[:, -2:-1]
+    else:
+        trend = torch.zeros_like(last)
+
+    hist_mean = raw.mean(dim=1, keepdim=True)
+    hist_std = raw.std(dim=1, keepdim=True, unbiased=False)
+    last_minus_mean = last - hist_mean
+
+    speed = torch.sqrt(raw[..., 0] * raw[..., 0] + raw[..., 1] * raw[..., 1] + eps)
+    speed_mean = speed.mean(dim=1, keepdim=True).unsqueeze(-1)
+    speed_std = speed.std(dim=1, keepdim=True, unbiased=False).unsqueeze(-1)
+    last_speed_minus_mean = (speed[:, -1:] - speed_mean.squeeze(-1)).unsqueeze(-1)
+
+    x_coord = torch.linspace(-1.0, 1.0, width, device=raw.device, dtype=raw.dtype).view(
+        1,
+        1,
+        1,
+        width,
+        1,
+    )
+    y_coord = torch.linspace(-1.0, 1.0, height, device=raw.device, dtype=raw.dtype).view(
+        1,
+        1,
+        height,
+        1,
+        1,
+    )
+    edge_x = (1.0 - torch.abs(x_coord)).clamp_min(0.0).expand(batch, out_steps, height, width, 1)
+    edge_y = (1.0 - torch.abs(y_coord)).clamp_min(0.0).expand(batch, out_steps, height, width, 1)
+    edge_min = torch.minimum(edge_x, edge_y)
+
+    def repeat_future(value):
+        return value.expand(-1, out_steps, -1, -1, -1)
+
+    return torch.cat(
+        [
+            repeat_future(hist_mean),
+            repeat_future(hist_std),
+            repeat_future(last_minus_mean),
+            repeat_future(trend),
+            repeat_future(speed_mean),
+            repeat_future(speed_std),
+            repeat_future(last_speed_minus_mean),
+            edge_x,
+            edge_y,
+            edge_min,
+        ],
+        dim=-1,
+    )
 
 
 def _central_diff_torch(arr, axis: int):
