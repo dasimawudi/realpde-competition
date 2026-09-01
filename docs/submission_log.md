@@ -181,3 +181,32 @@ mvpe: 0.10258214
 local_mean5_proxy: 77.76902
 zip: submission_cno_residualcorr_h24_b2_step200_alpha100_abs0075_rel015_20260831.zip
 ```
+
+## Local packages prepared on 2026-09-01
+
+The strongest path so far is no longer a pure CNO checkpoint. It uses the best CNO fine-tune from the `E3` loss run as the frozen base, then trains the same small feature-driven residual corrector used on 2026-08-31.
+
+Current recommended manual upload:
+
+| File | Role |
+|---|---|
+| `submission_cnoE3_residualcorr_h32_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Current best local package. Frozen E3 CNO base plus 3D-conv residual corrector, `hidden=32`, `blocks=2`, `max_delta=0.04`, `alpha=1.0`, `abs=0.0075`, `rel=0.0075`. Full-evaluated and smoke-tested after packaging. |
+| `submission_cnoE3_residualcorr_h32_b2_u1600_alpha100_abs0075_rel0075_20260901.zip` | Previous best package from the same direction. Valid backup package, but lower local proxy than the u2400 package. |
+| `submission_cnoE3_residualcorr_h32_b2_u1200_alpha100_abs0075_rel0075_20260901.zip` | Earlier checkpoint from the same direction. Valid backup package, but lower local proxy than the u1600 package. |
+
+Independent HDF5 validation comparison:
+
+| Run | Proxy final | rel_l2 | TKE | MVPE | Time score | SPS | Best bound |
+|---|---:|---:|---:|---:|---:|---:|---|
+| previous best residual on 2026-08-31 CNO, u1200 | 78.767054 | 0.105374 | 0.585114 | 0.095624 | 84.253253 | 41.784036 | `abs=0.0075, rel=0.0075` |
+| E3 CNO only | 77.824316 | 0.101558 | 0.593833 | 0.092624 | 79.909494 | 41.364861 | `abs=0.0075, rel=0.015` |
+| E3 CNO + residual, u1200 | 79.657262 | 0.095492 | 0.523265 | 0.086761 | 84.274457 | 43.464214 | `abs=0.0075, rel=0.0075` |
+| E3 CNO + residual, u1600 | 79.758424 | 0.094830 | 0.516260 | 0.086174 | 84.240837 | 43.725785 | `abs=0.0075, rel=0.0075` |
+| E3 CNO + residual, u2400 | 79.914030 | 0.093833 | 0.507095 | 0.085441 | 84.252116 | 44.122848 | `abs=0.0075, rel=0.0075` |
+
+Negative or non-submission experiments:
+
+- Extending the old 2026-08-31 residual model from u1200 to u1600 reduced errors slightly but lost enough time score that the proxy fell to `78.610530`.
+- CNO weight interpolation between the old CNO and the E3 CNO was unstable. Direct E3 improved over the old CNO, but interpolation at `0.25/0.5/0.75` degraded badly and extrapolation produced NaNs.
+- Averaging the old residual model with the new E3 residual model lowered raw errors a little, but double-model inference cut the time score; best ensemble proxy was only `78.792799`.
+- Raising the residual loss TKE weight from `0.12` to `0.16` or `0.20` improved TKE but hurt rel_l2/MVPE enough that the final proxy stayed below the current best.
