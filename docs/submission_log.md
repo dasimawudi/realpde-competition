@@ -190,8 +190,9 @@ Current recommended manual upload:
 
 | File | Role |
 |---|---|
-| `submission_cnoE3_residualcorr_h48_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Current best local package. Frozen E3 CNO base plus a wider 3D-conv residual corrector, `hidden=48`, `blocks=2`, `max_delta=0.04`, `alpha=1.0`, `abs=0.0075`, `rel=0.0075`. Full-evaluated and smoke-tested after packaging. |
-| `submission_cnoE3_residualcorr_h32_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Previous best package from the same direction. Valid backup package, but lower local proxy than the h48 package. |
+| `submission_cnoE3_residualcorr_h64_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Current best local package. Frozen E3 CNO base plus a wider 3D-conv residual corrector, `hidden=64`, `blocks=2`, `max_delta=0.04`, `alpha=1.0`, `abs=0.0075`, `rel=0.0075`. Full-evaluated and smoke-tested after packaging. |
+| `submission_cnoE3_residualcorr_h48_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Previous best package from the same direction. Valid backup package, but lower local proxy than the h64 package. |
+| `submission_cnoE3_residualcorr_h32_b2_u2400_alpha100_abs0075_rel0075_20260901.zip` | Earlier best package from the same direction. Valid backup package, but lower local proxy than the h48 package. |
 | `submission_cnoE3_residualcorr_h32_b2_u1600_alpha100_abs0075_rel0075_20260901.zip` | Older checkpoint from the same direction. Valid backup package, but lower local proxy than the h32/u2400 package. |
 | `submission_cnoE3_residualcorr_h32_b2_u1200_alpha100_abs0075_rel0075_20260901.zip` | Earlier checkpoint from the same direction. Valid backup package, but lower local proxy than the h32/u1600 package. |
 
@@ -205,6 +206,7 @@ Independent HDF5 validation comparison:
 | E3 CNO + residual, u1600 | 79.758424 | 0.094830 | 0.516260 | 0.086174 | 84.240837 | 43.725785 | `abs=0.0075, rel=0.0075` |
 | E3 CNO + residual, u2400 | 79.914030 | 0.093833 | 0.507095 | 0.085441 | 84.252116 | 44.122848 | `abs=0.0075, rel=0.0075` |
 | E3 CNO + residual, h48/b2/u2400 | 80.079433 | 0.092650 | 0.494225 | 0.083971 | 84.071545 | 44.597158 | `abs=0.0075, rel=0.0075` |
+| E3 CNO + residual, h64/b2/u2400 | 80.203498 | 0.091532 | 0.490739 | 0.082907 | 84.020987 | 45.055720 | `abs=0.0075, rel=0.0075` |
 
 Negative or non-submission experiments:
 
