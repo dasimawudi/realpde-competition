@@ -48,6 +48,7 @@ def submission_source(
     dropout: float,
     include_pressure: bool,
     max_delta: float,
+    history_context: bool,
 ) -> str:
     return textwrap.dedent(
         f"""
@@ -67,6 +68,7 @@ def submission_source(
         _DROPOUT = {float(dropout)!r}
         _INCLUDE_PRESSURE = {bool(include_pressure)!r}
         _MAX_DELTA = {float(max_delta)!r}
+        _HISTORY_CONTEXT = {bool(history_context)!r}
 
 
         def _persistence(input_array):
@@ -144,10 +146,13 @@ def submission_source(
                 ).view(1, out_steps, 1, 1, 1)
                 return zero_pressure(last + steps * trend)
 
-            def future_feature_count(include_pressure):
-                return 2 * len(feature_names(include_pressure=include_pressure)) + 9 + future_context_feature_count()
+            def future_feature_count(include_pressure, history_context):
+                count = 2 * len(feature_names(include_pressure=include_pressure)) + 9
+                if history_context:
+                    count += future_context_feature_count()
+                return count
 
-            def build_future_features(x, base_pred, include_pressure):
+            def build_future_features(x, base_pred, include_pressure, history_context):
                 base = zero_pressure(ensure_three_channels(base_pred))
                 out_steps = int(base.shape[1])
                 last_raw = ensure_three_channels(x[:, -1:]).expand(-1, out_steps, -1, -1, -1)
@@ -156,11 +161,10 @@ def submission_source(
                 base_features = augment_torch(base, include_pressure=include_pressure)
                 past_features = augment_torch(ensure_three_channels(x), include_pressure=include_pressure)
                 last_features = past_features[:, -1:].expand(-1, out_steps, -1, -1, -1)
-                context_features = future_context_torch(x, out_steps)
-                return torch.cat(
-                    [base_features, last_features, linear, base - last_raw, base - linear, context_features],
-                    dim=-1,
-                )
+                pieces = [base_features, last_features, linear, base - last_raw, base - linear]
+                if history_context:
+                    pieces.append(future_context_torch(x, out_steps))
+                return torch.cat(pieces, dim=-1)
 
             def norm_groups(channels):
                 for groups in (8, 4, 2):
@@ -187,7 +191,10 @@ def submission_source(
             class ResidualCorrector3D(nn.Module):
                 def __init__(self):
                     super().__init__()
-                    in_channels = future_feature_count(include_pressure=_INCLUDE_PRESSURE)
+                    in_channels = future_feature_count(
+                        include_pressure=_INCLUDE_PRESSURE,
+                        history_context=_HISTORY_CONTEXT,
+                    )
                     self.input_norm = nn.LayerNorm(in_channels)
                     layers = [
                         nn.Conv3d(in_channels, _HIDDEN, kernel_size=3, padding=1),
@@ -200,7 +207,12 @@ def submission_source(
                     self.net = nn.Sequential(*layers)
 
                 def forward(self, x, base_pred):
-                    features = build_future_features(x, base_pred, include_pressure=_INCLUDE_PRESSURE)
+                    features = build_future_features(
+                        x,
+                        base_pred,
+                        include_pressure=_INCLUDE_PRESSURE,
+                        history_context=_HISTORY_CONTEXT,
+                    )
                     features = self.input_norm(features)
                     z = features.permute(0, 4, 1, 2, 3).contiguous()
                     raw_delta = self.net(z).permute(0, 2, 3, 4, 1).contiguous()
@@ -299,6 +311,8 @@ def main() -> None:
     parser.add_argument("--include-pressure", action="store_true")
     parser.add_argument("--drop-pressure-feature", action="store_true")
     parser.add_argument("--max-delta", type=float, default=None)
+    parser.add_argument("--history-context", action="store_true")
+    parser.add_argument("--no-history-context", action="store_true")
     parser.add_argument("--max-size-mb", type=float, default=256.0)
     args = parser.parse_args()
 
@@ -318,6 +332,14 @@ def main() -> None:
     blocks = args.blocks if args.blocks is not None else int(config.get("blocks", 2))
     dropout = args.dropout if args.dropout is not None else float(config.get("dropout", 0.0))
     max_delta = args.max_delta if args.max_delta is not None else float(config.get("max_delta", 0.05))
+    if args.history_context and args.no_history_context:
+        raise ValueError("choose only one of --history-context or --no-history-context")
+    if args.history_context:
+        history_context = True
+    elif args.no_history_context:
+        history_context = False
+    else:
+        history_context = bool(config.get("history_context", False))
     if args.drop_pressure_feature:
         include_pressure = False
     elif args.include_pressure:
@@ -345,6 +367,7 @@ def main() -> None:
             dropout=dropout,
             include_pressure=include_pressure,
             max_delta=max_delta,
+            history_context=history_context,
         ),
         encoding="utf-8",
     )
@@ -361,6 +384,7 @@ def main() -> None:
                 "dropout": dropout,
                 "include_pressure": include_pressure,
                 "max_delta": max_delta,
+                "history_context": history_context,
             },
             indent=2,
             default=str,
@@ -387,6 +411,7 @@ def main() -> None:
                 "blocks": blocks,
                 "include_pressure": include_pressure,
                 "max_delta": max_delta,
+                "history_context": history_context,
                 "size_mb": size_mb,
             },
             indent=2,

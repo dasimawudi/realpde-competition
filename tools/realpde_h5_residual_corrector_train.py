@@ -89,15 +89,24 @@ def future_linear_extrapolation(x: Tensor, out_steps: int) -> Tensor:
     return zero_pressure(last + steps * trend)
 
 
-def future_feature_count(include_pressure: bool) -> int:
+def future_feature_count(include_pressure: bool, history_context: bool = False) -> int:
     # CNO forecast features + last-observed features + three 3-channel relation
     # blocks: linear extrapolation, CNO-last, CNO-linear.  The final context
     # block repeats history statistics and boundary-distance hints along the
     # future axis.
-    return 2 * len(feature_names(include_pressure=include_pressure)) + 9 + future_context_feature_count()
+    count = 2 * len(feature_names(include_pressure=include_pressure)) + 9
+    if history_context:
+        count += future_context_feature_count()
+    return count
 
 
-def build_future_features(x: Tensor, base_pred: Tensor, *, include_pressure: bool) -> Tensor:
+def build_future_features(
+    x: Tensor,
+    base_pred: Tensor,
+    *,
+    include_pressure: bool,
+    history_context: bool = False,
+) -> Tensor:
     base = zero_pressure(ensure_three_channels(base_pred))
     out_steps = int(base.shape[1])
     last_raw = ensure_three_channels(x[:, -1:]).expand(-1, out_steps, -1, -1, -1)
@@ -107,19 +116,17 @@ def build_future_features(x: Tensor, base_pred: Tensor, *, include_pressure: boo
     base_features = augment_torch(base, include_pressure=include_pressure)
     past_features = augment_torch(ensure_three_channels(x), include_pressure=include_pressure)
     last_features = past_features[:, -1:].expand(-1, out_steps, -1, -1, -1)
-    context_features = future_context_torch(x, out_steps)
+    pieces = [
+        base_features,
+        last_features,
+        linear,
+        base - last_raw,
+        base - linear,
+    ]
+    if history_context:
+        pieces.append(future_context_torch(x, out_steps))
 
-    return torch.cat(
-        [
-            base_features,
-            last_features,
-            linear,
-            base - last_raw,
-            base - linear,
-            context_features,
-        ],
-        dim=-1,
-    )
+    return torch.cat(pieces, dim=-1)
 
 
 def norm_groups(channels: int) -> int:
@@ -153,13 +160,17 @@ class CorrectorConfig:
     dropout: float = 0.0
     include_pressure: bool = True
     max_delta: float = 0.05
+    history_context: bool = False
 
 
 class ResidualCorrector3D(nn.Module):
     def __init__(self, config: CorrectorConfig) -> None:
         super().__init__()
         self.config = config
-        in_channels = future_feature_count(include_pressure=config.include_pressure)
+        in_channels = future_feature_count(
+            include_pressure=config.include_pressure,
+            history_context=config.history_context,
+        )
         hidden = int(config.hidden)
         self.input_norm = nn.LayerNorm(in_channels)
         layers: list[nn.Module] = [
@@ -177,7 +188,12 @@ class ResidualCorrector3D(nn.Module):
             nn.init.zeros_(final.bias)
 
     def forward(self, x: Tensor, base_pred: Tensor) -> Tensor:
-        features = build_future_features(x, base_pred, include_pressure=self.config.include_pressure)
+        features = build_future_features(
+            x,
+            base_pred,
+            include_pressure=self.config.include_pressure,
+            history_context=self.config.history_context,
+        )
         features = self.input_norm(features)
         z = features.permute(0, 4, 1, 2, 3).contiguous()
         raw_delta = self.net(z).permute(0, 2, 3, 4, 1).contiguous()
@@ -360,12 +376,14 @@ def main() -> None:
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--max-delta", type=float, default=0.05)
     parser.add_argument("--drop-pressure-feature", action="store_true")
+    parser.add_argument("--history-context", action="store_true")
     parser.add_argument("--include-pressure-data", action="store_true")
     parser.add_argument("--in-steps", type=int, default=20)
     parser.add_argument("--out-steps", type=int, default=20)
     parser.add_argument("--stride", type=int, default=20)
     parser.add_argument("--sub-sample", type=int, default=2)
     parser.add_argument("--val-fraction", type=float, default=0.2)
+    parser.add_argument("--train-on-all", action="store_true")
     parser.add_argument("--max-windows-per-trajectory", type=int, default=None)
     parser.add_argument("--max-eval-batches", type=int, default=None)
     parser.add_argument("--seed", type=int, default=41)
@@ -394,8 +412,9 @@ def main() -> None:
 
     paths = list_h5(args.real_root, BAD_TRAIN_FILES)
     train_paths, val_paths = split_paths(paths, args.val_fraction, args.seed)
+    fit_paths = paths if args.train_on_all else train_paths
     train_dataset = H5WindowDataset(
-        train_paths,
+        fit_paths,
         in_steps=args.in_steps,
         out_steps=args.out_steps,
         stride=args.stride,
@@ -435,6 +454,7 @@ def main() -> None:
         dropout=args.dropout,
         include_pressure=not args.drop_pressure_feature,
         max_delta=args.max_delta,
+        history_context=args.history_context,
     )
     model = ResidualCorrectionModel(base_model, ResidualCorrector3D(corrector_config)).to(device)
     optimizer = torch.optim.AdamW(model.corrector.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -458,6 +478,7 @@ def main() -> None:
         "realpdebench_root": str(args.realpdebench_root),
         "device": str(device),
         "train_trajectories": len(train_paths),
+        "fit_trajectories": len(fit_paths),
         "val_trajectories": len(val_paths),
         "train_windows": len(train_dataset),
         "val_windows": len(val_dataset),

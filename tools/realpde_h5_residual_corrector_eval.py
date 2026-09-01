@@ -61,6 +61,7 @@ def load_model(checkpoint_path: Path, realpdebench_root: Path, device: torch.dev
         dropout=float(config_dict.get("dropout", 0.0)),
         include_pressure=bool(config_dict.get("include_pressure", True)),
         max_delta=float(config_dict.get("max_delta", 0.05)),
+        history_context=bool(config_dict.get("history_context", False)),
     )
     CNO3d = load_cno_class(realpdebench_root)
     base_model = CNO3d(
